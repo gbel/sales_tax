@@ -3,14 +3,22 @@ Main file for the reicept details printer
 '''
 
 import abc
+import math
 import re
 
-from decimal import Decimal, getcontext
+from decimal import Decimal, getcontext, ROUND_HALF_EVEN
 
-BASE_SALES_TAX = 1.10
-IMPORTED_TAX = 1.05
+BASE_SALES_TAX = 0.10
+IMPORTED_TAX = 0.05
 TAX_EXEMPT = ('book', 'chocolate', 'chocolates', 'pills')
 DICT_DB = dict()
+
+
+def round_nearest(x, a=0.05):
+    """
+    Helper function to provide the required ROUND policy
+    """
+    return round(round(x / a) * a, -int(math.floor(math.log10(a))))
 
 
 class BaseReceipt(object):
@@ -46,6 +54,10 @@ class BaseReceipt(object):
     @abc.abstractmethod
     def product_imported(self):
         """Return True if product is imported. Based on name."""
+
+    @abc.abstractmethod
+    def product_tax_calculator(self, tax_rate):
+        """Apply tax rate to product price. Returns a float"""
 
     @abc.abstractmethod
     def product_price(self):
@@ -92,13 +104,33 @@ class Receipt(BaseReceipt):
         else:
             return False
 
+    def product_tax_calculator(self, tax_rate):
+        #setup decimal context
+        getcontext().prec = 4
+        getcontext().round = ROUND_HALF_EVEN
+        total = Decimal(self.price) * Decimal(tax_rate)
+        total = round_nearest(total.__float__())
+        return float(self.price) + total
+
     def product_price(self):
+        #tax exempt not import tax
         if self.product_tax_exempt() and not self.product_imported():
             return self.price
+
+        #tax exempt and import tax
+        if self.product_tax_exempt() and self.product_imported():
+            price = self.product_tax_calculator(self.import_tax)
+            return '%.2f' % price
+
+        #base tax not import tax
         if not self.product_tax_exempt() and not self.product_imported():
-            getcontext().prec = 4
-            total = Decimal(self.base_tax) * Decimal(self.price)
-            return total.to_eng_string()
+            price = self.product_tax_calculator(self.base_tax)
+            return '%.2f' % price
+
+        #base tax and import tax
+        if not self.product_tax_exempt() and self.product_imported():
+            price = self.product_tax_calculator(self.base_tax + self.import_tax)
+            return '%.2f' % price
 
     def cart_total(self):
         pass

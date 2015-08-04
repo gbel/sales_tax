@@ -30,3 +30,6 @@ class TestReceipt(unittest.TestCase):
     def test_product_price(self):
         self.assertEqual(self.input1_a.product_price(), '12.49')
         self.assertEqual(self.input1_b.product_price(), '16.49')
+        self.assertEqual(self.input2_a.product_price(), '10.50')
+        self.assertEqual(self.input2_b.product_price(), '54.65')
+        self.assertEqual(self.input3_a.product_price(), '32.19')
