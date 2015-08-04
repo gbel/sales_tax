@@ -93,7 +93,8 @@ class Receipt(BaseReceipt):
             return False
 
     def product_price(self):
-        pass
+        if self.product_tax_exempt() and not self.product_imported():
+            return self.price
 
     def cart_total(self):
         pass
