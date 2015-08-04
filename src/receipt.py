@@ -5,10 +5,10 @@ Main file for the reicept details printer
 import abc
 import re
 
-from decimal import Decimal
+from decimal import Decimal, getcontext
 
-BASE_SALES_TAX = .10
-IMPORTED_TAX = .05
+BASE_SALES_TAX = 1.10
+IMPORTED_TAX = 1.05
 TAX_EXEMPT = ('book', 'chocolate', 'chocolates', 'pills')
 DICT_DB = dict()
 
@@ -95,6 +95,10 @@ class Receipt(BaseReceipt):
     def product_price(self):
         if self.product_tax_exempt() and not self.product_imported():
             return self.price
+        if not self.product_tax_exempt() and not self.product_imported():
+            getcontext().prec = 4
+            total = Decimal(self.base_tax) * Decimal(self.price)
+            return total.to_eng_string()
 
     def cart_total(self):
         pass

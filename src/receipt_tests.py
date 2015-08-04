@@ -27,6 +27,6 @@ class TestReceipt(unittest.TestCase):
         self.assertTrue(self.input2_a.product_imported())
         self.assertFalse(self.input3_b.product_imported())
 
-
     def test_product_price(self):
-        self.assertEqual(self.input1_a.product_price(), '12.49') 
+        self.assertEqual(self.input1_a.product_price(), '12.49')
+        self.assertEqual(self.input1_b.product_price(), '16.49')
