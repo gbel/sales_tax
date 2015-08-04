@@ -5,20 +5,20 @@ Main file for the reicept details printer
 import abc
 import math
 import re
+import shelve
 
 from decimal import Decimal, getcontext, ROUND_HALF_EVEN
 
 BASE_SALES_TAX = 0.10
 IMPORTED_TAX = 0.05
 TAX_EXEMPT = ('book', 'chocolate', 'chocolates', 'pills')
-DICT_DB = dict()
+RECEIPT_DB = shelve.open('receipts.db')
 
-
-def round_nearest(x, a=0.05):
+def round_nearest(price, a=0.05):
     """
     Helper function to provide the required ROUND policy
     """
-    return round(round(x / a) * a, -int(math.floor(math.log10(a))))
+    return round(round(price / a) * a, -int(math.floor(math.log10(a))))
 
 
 class BaseReceipt(object):
@@ -41,7 +41,6 @@ class BaseReceipt(object):
         """
         instance = object.__new__(cls)
 
-        instance.cart = DICT_DB
         instance.base_tax = BASE_SALES_TAX
         instance.import_tax = IMPORTED_TAX
 
@@ -64,12 +63,23 @@ class BaseReceipt(object):
         """Return product total price with tax and all."""
 
     @abc.abstractmethod
-    def cart_total(self):
-        """Return Receipt total with tax and all."""
+    def receipt_save(self):
+        """
+        Save cart to shelf. Dict structure:
+            {
+              items: { {
+                       qty: 1,
+                       name: `product_name`,
+                       price: `price_with_tax`]
+                       }, },
+               sales_tax: 'total_tax',
+               total: 'receipt_total'
+            }
+        """
 
     @abc.abstractmethod
-    def populate_db(self):
-        """Populate in memory dict()"""
+    def receipt_retrieve(self, id):
+        """Retrieve given id from shelf"""
 
     @abc.abstractmethod
     def print_receipt(self):
@@ -82,8 +92,8 @@ class Receipt(BaseReceipt):
 
     Attributes:
         qty: An integer representing the quantity.
-        name: The integral number of miles driven on the vehicle.
-        make: The make of the vehicle as a string.
+        name: The name of product (string).
+        price: The product price (string).
     """
     def __init__(self, qty, name, price):
         self.qty = qty
@@ -110,32 +120,36 @@ class Receipt(BaseReceipt):
         getcontext().round = ROUND_HALF_EVEN
         total = Decimal(self.price) * Decimal(tax_rate)
         total = round_nearest(total.__float__())
-        return float(self.price) + total
+        return round(float(self.price) + total, 2)
 
     def product_price(self):
         #tax exempt not import tax
         if self.product_tax_exempt() and not self.product_imported():
-            return self.price
+            return float(self.price)
 
         #tax exempt and import tax
         if self.product_tax_exempt() and self.product_imported():
-            price = self.product_tax_calculator(self.import_tax)
-            return '%.2f' % price
+            return self.product_tax_calculator(self.import_tax)
 
         #base tax not import tax
         if not self.product_tax_exempt() and not self.product_imported():
-            price = self.product_tax_calculator(self.base_tax)
-            return '%.2f' % price
+            return self.product_tax_calculator(self.base_tax)
 
         #base tax and import tax
         if not self.product_tax_exempt() and self.product_imported():
-            price = self.product_tax_calculator(self.base_tax + self.import_tax)
-            return '%.2f' % price
+            return self.product_tax_calculator(self.base_tax + self.import_tax)
 
-    def cart_total(self):
-        pass
+    def receipt_save(self, id):
+        data = dict(items=[dict(
+                                qty=self.qty,
+                                name=self.name,
+                                price=self.product_price),
+                          ],
+                    sales_tax=self.product_price,
+                    total=self.product_price)
+        return data
 
-    def populate_db(self):
+    def receipt_retrieve(self, id):
         pass
 
     def print_receipt(self):
