@@ -63,7 +63,7 @@ class BaseReceipt(object):
         """Return product total price with tax and all."""
 
     @abc.abstractmethod
-    def receipt_save(self):
+    def receipt_save_item(self):
         """
         Save cart to shelf. Dict structure:
             {
@@ -119,8 +119,7 @@ class Receipt(BaseReceipt):
         getcontext().prec = 4
         getcontext().round = ROUND_HALF_EVEN
         total = Decimal(self.price) * Decimal(tax_rate)
-        total = round_nearest(total.__float__())
-        return round(float(self.price) + total, 2)
+        return round_nearest(total.__float__())
 
     def product_price(self):
         #tax exempt not import tax
@@ -129,23 +128,23 @@ class Receipt(BaseReceipt):
 
         #tax exempt and import tax
         if self.product_tax_exempt() and self.product_imported():
-            return self.product_tax_calculator(self.import_tax)
+            return round(float(self.price) + self.product_tax_calculator(self.import_tax),2)
 
         #base tax not import tax
         if not self.product_tax_exempt() and not self.product_imported():
-            return self.product_tax_calculator(self.base_tax)
+            return round(float(self.price) + self.product_tax_calculator(self.base_tax),2)
 
         #base tax and import tax
         if not self.product_tax_exempt() and self.product_imported():
-            return self.product_tax_calculator(self.base_tax + self.import_tax)
+            return round(float(self.price) + self.product_tax_calculator(self.base_tax + self.import_tax),2)
 
-    def receipt_save(self, id):
+    def receipt_save_item(self, id):
         data = dict(items=[dict(
                                 qty=self.qty,
                                 name=self.name,
                                 price=self.product_price),
                           ],
-                    sales_tax=self.product_price,
+                    sales_tax=self.product_tax_calculator,
                     total=self.product_price)
         return data
 
