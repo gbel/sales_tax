@@ -56,4 +56,13 @@ Output 3:
 Sales Taxes: 6.70
 Total: 74.68
 
+
+How To Run
 ==========
+
+You can just run the script `receipt_generator.py` from console:
+
+`$ python receipt_generator.py`
+
+Or install the package with `$ python setup.py install` and run the script `receipt_generator.py`
+

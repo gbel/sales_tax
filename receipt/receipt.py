@@ -1,5 +1,5 @@
 '''
-Main file for the reicept details printer
+Main file for the receipt details printer
 '''
 
 import abc
@@ -112,6 +112,9 @@ class Receipt(BaseReceipt):
             return False
 
     def product_tax_calculator(self, tax_rate):
+        """ Return product final price based on the provided `tax_rate`
+        Decimal module used for precision and rounding purposes
+        """
         #setup decimal context
         getcontext().prec = 4
         getcontext().round = ROUND_HALF_EVEN
@@ -166,6 +169,11 @@ class Receipt(BaseReceipt):
 
     @staticmethod
     def receipt_checkout(key):
+        """
+        Retrieve requested receipt (key) from database.
+        Clears receipt from database.
+        Returns dict with receipt details.
+        """
         database = shelve.open(RECEIPT_DB)
         data = None
         if key in database:

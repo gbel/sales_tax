@@ -39,6 +39,9 @@ class TestReceipt(unittest.TestCase):
         self.assertEqual(self.input2_a.product_price(), 10.50)
         self.assertEqual(self.input2_b.product_price(), 54.65)
         self.assertEqual(self.input3_a.product_price(), 32.19)
+        self.assertEqual(self.input3_b.product_price(), 20.89)
+        self.assertEqual(self.input3_c.product_price(), 9.75)
+        self.assertEqual(self.input3_d.product_price(), 11.8)
 
     def test_save_receipt_item(self):
         data = self.input1_a.receipt_save_item('input1')
@@ -58,9 +61,9 @@ class TestReceipt(unittest.TestCase):
     def test_retrieve_receipt(self):
         self.input2_a.receipt_save_item('input2')
         self.input2_b.receipt_save_item('input2')
-        receipt = self.input2_a.receipt_retrieve('input2')
+        receipt = self.input2_a.receipt_checkout('input2')
         self.assertEqual(receipt['total'], 65.15)
 
     def test_retrieve_non_existent_receipt(self):
-        self.assertIsNone(self.input3_d.receipt_retrieve('input2'))
+        self.assertIsNone(self.input3_d.receipt_checkout('input2'))
 
