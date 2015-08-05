@@ -12,13 +12,13 @@ from decimal import Decimal, getcontext, ROUND_HALF_EVEN
 BASE_SALES_TAX = 0.10
 IMPORTED_TAX = 0.05
 TAX_EXEMPT = ('book', 'chocolate', 'chocolates', 'pills')
-RECEIPT_DB = shelve.open('receipts.db')
+RECEIPT_DB = 'shelve.db'
 
-def round_nearest(price, a=0.05):
+def round_nearest(price, nearest=0.05):
     """
     Helper function to provide the required ROUND policy
     """
-    return round(round(price / a) * a, -int(math.floor(math.log10(a))))
+    return round(round(price / nearest) * nearest, -int(math.floor(math.log10(nearest))))
 
 
 class BaseReceipt(object):
@@ -28,7 +28,7 @@ class BaseReceipt(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    __slots__ = ["cart", "base_tax", 'import_tax']
+    __slots__ = ["cart", "base_tax", 'import_tax', 'product_tax']
     """
     Slots define [template] abstract class attributes. No instance
     __dict__ will be present unless subclasses create it through
@@ -43,6 +43,7 @@ class BaseReceipt(object):
 
         instance.base_tax = BASE_SALES_TAX
         instance.import_tax = IMPORTED_TAX
+        instance.product_tax = 0
 
         return instance
 
@@ -63,7 +64,7 @@ class BaseReceipt(object):
         """Return product total price with tax and all."""
 
     @abc.abstractmethod
-    def receipt_save_item(self):
+    def receipt_save_item(self, key):
         """
         Save cart to shelf. Dict structure:
             {
@@ -78,12 +79,8 @@ class BaseReceipt(object):
         """
 
     @abc.abstractmethod
-    def receipt_retrieve(self, id):
-        """Retrieve given id from shelf"""
-
-    @abc.abstractmethod
-    def print_receipt(self):
-        """Print out receipt"""
+    def receipt_checkout(self):
+        """Return receipt and clear the database"""
 
 
 class Receipt(BaseReceipt):
@@ -119,7 +116,8 @@ class Receipt(BaseReceipt):
         getcontext().prec = 4
         getcontext().round = ROUND_HALF_EVEN
         total = Decimal(self.price) * Decimal(tax_rate)
-        return round_nearest(total.__float__())
+        self.product_tax = round_nearest(total.__float__())
+        return round(float(self.price) + self.product_tax, 2)
 
     def product_price(self):
         #tax exempt not import tax
@@ -128,28 +126,50 @@ class Receipt(BaseReceipt):
 
         #tax exempt and import tax
         if self.product_tax_exempt() and self.product_imported():
-            return round(float(self.price) + self.product_tax_calculator(self.import_tax),2)
+            return self.product_tax_calculator(self.import_tax)
 
         #base tax not import tax
         if not self.product_tax_exempt() and not self.product_imported():
-            return round(float(self.price) + self.product_tax_calculator(self.base_tax),2)
+            return self.product_tax_calculator(self.base_tax)
 
         #base tax and import tax
         if not self.product_tax_exempt() and self.product_imported():
-            return round(float(self.price) + self.product_tax_calculator(self.base_tax + self.import_tax),2)
+            return self.product_tax_calculator(self.base_tax + self.import_tax)
 
-    def receipt_save_item(self, id):
-        data = dict(items=[dict(
-                                qty=self.qty,
-                                name=self.name,
-                                price=self.product_price),
-                          ],
-                    sales_tax=self.product_tax_calculator,
-                    total=self.product_price)
+    def receipt_save_item(self, key):
+        """
+        Open shelve database, check if key exists. If it does append new item.
+        If it doesn't add first item.
+        """
+        data = None
+        database = shelve.open(RECEIPT_DB)
+        if key in database:
+            data = database[key]
+            data['items'].append(dict(
+                qty=self.qty,
+                name=self.name,
+                price=self.product_price()))
+
+            data['sales_tax'] += self.product_tax
+            data['total'] += self.product_price()
+        else:
+            data = dict(
+                items=[dict(
+                    qty=self.qty,
+                    name=self.name,
+                    price=self.product_price()),],
+                sales_tax=self.product_tax,
+                total=self.product_price())
+        database[key] = data
+        database.close()
         return data
 
-    def receipt_retrieve(self, id):
-        pass
-
-    def print_receipt(self):
-        pass
+    @staticmethod
+    def receipt_checkout(key):
+        database = shelve.open(RECEIPT_DB)
+        data = None
+        if key in database:
+            data = database[key]
+            del database[key]
+        database.close()
+        return data
