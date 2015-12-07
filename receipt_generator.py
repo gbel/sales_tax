@@ -8,10 +8,10 @@ def receipt_printout(receipt, header=None):
     if header:
         print(header)
     for item in receipt['items']:
-        print("{} {}: {}".format(item['qty'], item['name'], item['price']))
+        print("{0} {1}: {2}".format(item['qty'], item['name'], item['price']))
 
-    print("Sales Taxes: {}".format(receipt['sales_tax']))
-    print("Total: {}".format(receipt['total']))
+    print("Sales Taxes: {0}".format(receipt['sales_tax']))
+    print("Total: {0}".format(receipt['total']))
 
 
 if __name__ == '__main__':
